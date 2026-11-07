@@ -1,10 +1,10 @@
 import http from 'http';
 import fs from 'fs';
 import { WebSocket, WebSocketServer } from 'ws';
-import { join } from 'path';
+import { join, extname, resolve, sep } from 'path';
 
 const PORT = 3001;
-const wsUrl = "http://localhost"; 
+const wsUrl = "http://localhost";
 const home = "index.html";
 const contentTypes = {
     html: "text/html",
@@ -26,22 +26,35 @@ const contentTypes = {
 const __dirname = import.meta.dirname;
 // // For compatibility with older versions of Node
 // import { fileURLToPath } from 'url';
-// import { dirname, join } from 'path';
+// import { dirname, join, extname, resolve, sep } from 'path';
 //
 // const __filename = fileURLToPath(import.meta.url);
 // const __dirname = dirname(__filename);
+// //
 
 const server = http.createServer((req, res) => {
-    let ru = decodeURIComponent(new URL(req.url, wsUrl).pathname.substring(1));
-    ru = ru === "" ? home : ru;
-    fs.readFile(join(__dirname, "public", ru), (err, data) => {
+    let ru;
+    try {
+        ru = decodeURIComponent(new URL(req.url, wsUrl).pathname.slice(1));
+    } catch {
+        res.writeHead(400).end("Bad Request");
+        return;
+    }
+    const fp = join(__dirname, "public", ru === "" ? home : ru);
+    const publicDir = resolve(__dirname, "public");
+    const resolvedPath = resolve(fp);
+    if (!resolvedPath.startsWith(publicDir + sep)) {
+        res.writeHead(403).end("Forbidden");
+        return;
+    }
+    fs.readFile(fp, (err, data) => {
         if(err){
-            console.error(err);
             const [sc, msg] = err.code === "ENOENT" ? [404, "File not found"] : [500, "Something went wrong"];
+            if(sc === 500) console.error(err);
             res.writeHead(sc).end(msg);
             return;
         }
-        res.setHeader("Content-Type", contentTypes[ru.split(".")?.pop()?.toLowerCase() || "default"]).end(data);
+        res.setHeader("Content-Type", contentTypes[extname(fp).slice(1).toLowerCase() || "default"]).end(data);
     });
 });
 
