@@ -54,7 +54,7 @@ const server = http.createServer((req, res) => {
             res.writeHead(sc).end(msg);
             return;
         }
-        res.setHeader("Content-Type", contentTypes[extname(fp).slice(1).toLowerCase() || "default"]).end(data);
+        res.setHeader("Content-Type", contentTypes[extname(fp).slice(1).toLowerCase()] || contentTypes["default"]).end(data);
     });
 });
 
